@@ -1,0 +1,101 @@
+# BPX-Pro 对照组：厂家参数（未做辨识）
+#
+# 用法：
+#   BPX_PRO_PARAMS_YAML=data/bpx_pro_baseline_params.yaml \
+#       python scripts/train.py --headless --num_envs 4096 --run-name teacher_baseline
+#
+# 和 bpx_pro_training_params.yaml 的唯一区别是**执行器参数的先验**。
+# 其他一切相同：网络结构、奖励、随机化机制、控制频率、PD、动作映射、质量。
+#
+# --- baseline 代表什么 ---
+# 厂家 bpxPro.urdf 的 12 个转动关节**没有任何 <dynamics> 标签** —— armature、阻尼、
+# 库伦摩擦全是 0，也没有力矩延迟。这就是"不做辨识直接拿厂家模型训"的起点，
+# 和 landing_compare / walk_replay 里的 baseline 定义一致。
+#
+# 但 baseline 不能完全不随机化：那样特权观测全是常数，z 不携带任何信息，
+# adaptation module 无从学起，RMA 会退化成一个坏掉的对照。所以 baseline 的设定是
+# **"知道模型形式、不知道参数值，于是宽随机化"** —— 这才是辨识真正要打败的对手。
+# 区间取得足够宽，把辨识值包在里面，但中心不在辨识值上。
+#
+# --- 质量 ---
+# 按用户要求和辨识组**取同一个 15.1 kg**，不用 USD 的 17.55。
+# 这样对照隔离的就只是执行器参数辨识的贡献，不被质量修正混进来。
+
+robot: bpx_pro_baseline
+
+# --- 标称值 = 不知情先验的中点，不是厂家的 0 ---
+# （真填 0 会让随机化区间退化，也会让特权观测的归一化除零；
+#   取中点既能当执行器 cfg 的默认值，也当观测归一化的尺度）
+nominal:
+  fl_hip_roll_joint:  {armature: 0.025, damping: 0.30, frictionloss: 0.50}
+  fl_hip_pitch_joint: {armature: 0.025, damping: 0.30, frictionloss: 0.50}
+  fl_knee_joint:      {armature: 0.025, damping: 0.30, frictionloss: 2.00}
+  fr_hip_roll_joint:  {armature: 0.025, damping: 0.30, frictionloss: 0.50}
+  fr_hip_pitch_joint: {armature: 0.025, damping: 0.30, frictionloss: 0.50}
+  fr_knee_joint:      {armature: 0.025, damping: 0.30, frictionloss: 2.00}
+  hl_hip_roll_joint:  {armature: 0.025, damping: 0.30, frictionloss: 0.50}
+  hl_hip_pitch_joint: {armature: 0.025, damping: 0.30, frictionloss: 0.50}
+  hl_knee_joint:      {armature: 0.025, damping: 0.30, frictionloss: 2.00}
+  hr_hip_roll_joint:  {armature: 0.025, damping: 0.30, frictionloss: 0.50}
+  hr_hip_pitch_joint: {armature: 0.025, damping: 0.30, frictionloss: 0.50}
+  hr_knee_joint:      {armature: 0.025, damping: 0.30, frictionloss: 2.00}
+
+# --- 和辨识组完全相同 ---
+mass:
+  total_kg: 15.1
+  range_kg: [14.1, 16.1]
+  note: 按用户要求与辨识组一致，隔离出执行器参数辨识的单独贡献
+
+encoder_bias:
+  nominal_rad: 0.0
+  range_rad: [-0.03, 0.03]       # 零偏本来就没辨识，两组一样
+
+actuator:
+  effort_limit_urdf: {hip: 33.0, knee: 50.0}
+  velocity_limit:    {hip: 22.0, knee: 15.0}
+  saturation_factor: 2.0
+  effort_limit_deploy: 30.0
+
+pd:
+  kp: 40.0
+  kd: 1.0
+  default_joint_pos: [0.0, 0.7, -1.4]
+  action_scale: 0.1875
+
+# --- 延迟：不知道有多少，从 0 randomize 到 10 ms ---
+# 辨识组是 4 ms 标称 / 2–8 ms；这里中心 5 ms、范围 0–10 ms。
+delay:
+  physical_ms: 5.0
+  range_ms: [0.0, 10.0]          # 500 Hz 下 0–5 步
+  note: 未辨识，宽随机化覆盖
+
+# --- 宽随机化：区间包住辨识值，但中心不在辨识值上 ---
+# 辨识值作参照：armature hip 0.0025–0.0063 / knee 0.021；
+#              阻尼 0.21–0.38；摩擦 hip 0.10–0.13 / knee 2.5
+randomization:
+  hip_roll:
+    armature_range: [0.0, 0.05]
+    damping_range: [0.0, 0.6]
+    frictionloss_range: [0.0, 1.0]
+  hip_pitch:
+    armature_range: [0.0, 0.05]
+    damping_range: [0.0, 0.6]
+    frictionloss_range: [0.0, 1.0]
+  knee:
+    armature_range: [0.0, 0.05]
+    damping_range: [0.0, 0.6]
+    frictionloss_range: [0.0, 4.0]
+
+# --- 负载模型关掉 ---
+# F = f0 + mu·L 这个形式和 f0 / mu 的值都是承重实验辨识出来的，
+# 不做辨识就不会知道，所以 baseline 用常数摩擦（靠上面的宽区间覆盖）。
+knee_friction:
+  load_model:
+    enabled: false
+    f0: 1.0
+    f0_range: [0.6, 1.4]
+    mu: 0.26
+    mu_range: [0.20, 0.35]
+    tau_s: 0.2
+    v_move: 0.02
+    clamp: [0.3, 5.0]

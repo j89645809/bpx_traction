@@ -1,0 +1,25 @@
+# 训练产物 / 日志 / 录制 / 视频（几 GB，不进代码仓库）
+logs/
+
+# 策略权重本地备份（含 checkpoint，用 deploy_pkg 的 ONNX 发布即可）
+released/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.ipynb_checkpoints/
+
+# 大二进制：checkpoint 和真机录制
+*.pt
+*.bin
+*.mp4
+
+# 部署产物（ONNX 二进制）—— 发布用 GitHub Release / LFS，不进 git 历史
+deploy_pkg/
+
+# 汇报材料
+*.pptx
+
+# 本地工具配置
+.claude/
