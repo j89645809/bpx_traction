@@ -611,3 +611,86 @@ class BpxProFlatEnvCfg_PLAY(BpxProFlatEnvCfg):
         self.commands.base_velocity.ranges.lin_vel_x = (0.5, 0.5)
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
         self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+
+
+##
+# 力感知 RMA（ForceAware）：policy 49 / history 1225。接口约定见 docs/force_aware_rma_interface.md
+##
+@configclass
+class ForceAwarePolicyFrameCfg(PolicyFrameCfg):
+    """原 45 维 + 估计力 3 + 置信度 1 = 49 维。新项追加在末尾，前 45 维顺序不动。
+
+    两项都只读 `mdp.force` 的缓存（噪声在事件里每步采一次），所以和 history 组逐位相等。
+    """
+
+    estimated_force = ObsTerm(func=mdp.estimated_force_obs)
+    force_confidence = ObsTerm(func=mdp.force_confidence_obs)
+
+
+@configclass
+class ForceAwareHistoryFrameCfg(ForceAwarePolicyFrameCfg):
+    """同样 8 项、每项 25 帧，term-major 展平 = 1225 维。"""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.history_length = spec.HISTORY_LENGTH
+        self.flatten_history_dim = True
+
+
+@configclass
+class ForceAwarePrivilegedCfg(PrivilegedCfg):
+    """原特权量 + 真实外力（机身系 /45）+ 挂点。"""
+
+    true_force = ObsTerm(func=mdp.true_force_obs)
+    force_attach = ObsTerm(func=mdp.force_attach_point)
+
+
+@configclass
+class ForceAwareObservationsCfg:
+    policy: ForceAwarePolicyFrameCfg = ForceAwarePolicyFrameCfg()
+    history: ForceAwareHistoryFrameCfg = ForceAwareHistoryFrameCfg()
+    privileged: ForceAwarePrivilegedCfg = ForceAwarePrivilegedCfg()
+
+
+@configclass
+class BpxProFlatForceAwareEnvCfg(BpxProFlatEnvCfg):
+    """力感知 RMA：在 `BpxProFlatEnvCfg` 上加牵引外力和估计器误差模型。
+
+    除了观测组和两个外力事件，其余（奖励、域随机化、频率、动作）和 Flat 完全一样。
+    奖励暂不改 —— 先看策略能不能在原奖励下利用力信息，再决定要不要加
+    force robustness 项（接口约定第 6 节）。
+    """
+
+    observations: ForceAwareObservationsCfg = ForceAwareObservationsCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        torso = SceneEntityCfg("robot", body_names=[spec.TORSO_BODY])
+        self.events.tether_reset = EventTerm(
+            func=mdp.tether_force_reset, mode="reset", params={"asset_cfg": torso}
+        )
+        step_dt = self.decimation * self.sim.dt
+        self.events.tether_step = EventTerm(
+            func=mdp.tether_force_step,
+            mode="interval",
+            interval_range_s=(step_dt, step_dt),
+            is_global_time=False,
+            params={"asset_cfg": torso},
+        )
+
+
+@configclass
+class BpxProFlatForceAwareEnvCfg_PLAY(BpxProFlatForceAwareEnvCfg):
+    """ForceAware 的回放 / 导出 / 契约检查配置。外力事件保留（否则两个新观测恒为 0，查不出东西）。"""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.episode_length_s = 40.0
+        self.observations.policy.enable_corruption = False
+        self.events.push_robot = None
+        self.events.base_com = None
+        self.commands.base_velocity.ranges.lin_vel_x = (0.5, 0.5)
+        self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
+        self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)

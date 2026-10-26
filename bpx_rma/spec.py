@@ -98,6 +98,37 @@ assert obs_term_slices() == [(0, 12), (12, 24), (24, 27), (27, 30), (30, 42), (4
 )
 
 # ---------------------------------------------------------------------------
+# 力感知 RMA 契约（ForceAware 任务专用，上面的 45 / 1125 原契约一个字都不动）
+# ---------------------------------------------------------------------------
+# 接口约定见 docs/force_aware_rma_interface.md。新两项**追加在原 45 维末尾**，
+# 原 6 项的顺序和分段不变，所以前 45 维和旧策略逐位相同。
+
+#: 估计力的归一化尺度 [N]：obs = clip(F_b / 45, ±1)。来自力估计器验收范围 0–45 N。
+FORCE_OBS_SCALE = 45.0
+
+FORCE_AWARE_OBS_TERMS: list[tuple[str, int]] = OBS_TERMS + [
+    ("estimated_force", 3),     # 机身系 clip(R_wb^T · F_w / 45, ±1)
+    ("force_confidence", 1),    # clip(confidence[:, 3], 0, 1)；无效 / 过期 / 预热 → 0（力同时置 0）
+]
+FORCE_AWARE_OBS_FRAME_SIZE = sum(dim for _, dim in FORCE_AWARE_OBS_TERMS)   # 49
+assert FORCE_AWARE_OBS_FRAME_SIZE == 49
+FORCE_AWARE_HISTORY_INPUT_SIZE = FORCE_AWARE_OBS_FRAME_SIZE * HISTORY_LENGTH   # 1225
+assert FORCE_AWARE_HISTORY_INPUT_SIZE == 1225
+
+
+def force_aware_obs_term_slices() -> list[tuple[int, int]]:
+    """ForceAware 单帧 49 维的分段 [起, 止)。前 6 段和 :func:`obs_term_slices` 完全相同。"""
+    out, begin = [], 0
+    for _, dim in FORCE_AWARE_OBS_TERMS:
+        out.append((begin, begin + dim))
+        begin += dim
+    return out
+
+
+assert force_aware_obs_term_slices()[:6] == obs_term_slices(), "ForceAware 前 45 维必须和原契约一致"
+assert force_aware_obs_term_slices()[6:] == [(45, 48), (48, 49)]
+
+# ---------------------------------------------------------------------------
 # URDF 的力矩 / 速度上限（按关节类型）
 # ---------------------------------------------------------------------------
 # 力矩：官方《BLACK PANTHER X 二次开发手册》V1.0.3 的 9.1 身体参数写的是

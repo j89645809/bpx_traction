@@ -5,6 +5,8 @@ import 这个包会把 gym 任务注册上（需要 Isaac Sim 已经启动，所
 
   ``Isaac-Velocity-Flat-BpxPro-v0``        训练用
   ``Isaac-Velocity-Flat-BpxPro-Play-v0``   回放 / 导出用
+  ``Isaac-Velocity-Flat-BpxPro-ForceAware-v0`` / ``-ForceAware-Play-v0``
+                                           力感知 RMA（policy 49 / history 1225）
 
 两个 agent 入口：
   ``rsl_rl_cfg_entry_point``               阶段一 PPO（teacher）
@@ -149,6 +151,28 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{_ENV}:BpxProFlatEnvCfg_PLAY",
+        "rsl_rl_cfg_entry_point": f"{_AGENTS}:BpxProFlatPPORunnerCfg",
+        "rsl_rl_distillation_cfg_entry_point": f"{_AGENTS}:BpxProFlatDistillationRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-Velocity-Flat-BpxPro-ForceAware-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{_ENV}:BpxProFlatForceAwareEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{_AGENTS}:BpxProFlatPPORunnerCfg",
+        "rsl_rl_distillation_cfg_entry_point": f"{_AGENTS}:BpxProFlatDistillationRunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-Velocity-Flat-BpxPro-ForceAware-Play-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{_ENV}:BpxProFlatForceAwareEnvCfg_PLAY",
         "rsl_rl_cfg_entry_point": f"{_AGENTS}:BpxProFlatPPORunnerCfg",
         "rsl_rl_distillation_cfg_entry_point": f"{_AGENTS}:BpxProFlatDistillationRunnerCfg",
     },
