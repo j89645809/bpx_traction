@@ -1,6 +1,6 @@
 # Source map
 
-The clean package was reconstructed from read-only files on `zy-server` (2026-10-27). The original files remain under `../references/archived_force_estimator/`.
+The clean package was reconstructed from read-only files on `zy-server` (2026-10-27). The original files are represented under `../training/legacy_mjlab/` and the clean package sources.
 
 | Clean file | Source file | Role |
 |---|---|---|

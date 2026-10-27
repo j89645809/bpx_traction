@@ -192,4 +192,4 @@ scripts/export_onnx.py      导出部署 ONNX
 
 ## 力估计器上游项目
 
-力估计器已整理为独立子项目：[force_estimator/](force_estimator/)。入口文档说明模型、输入输出契约、归一化统计量、BPX handoff、验证命令和远端来源；旧版 Go2/mjlab 文件仅作为 `references/archived_force_estimator/` 中的溯源材料保留。
+力估计器已整理为独立子项目：[force_estimator/](force_estimator/)。入口文档说明模型、输入输出契约、归一化统计量、BPX handoff、验证命令和来源；Go2/mjlab 训练所需源码集中在 `force_estimator/training/legacy_mjlab/`。

@@ -39,7 +39,7 @@ force_estimator/
 └── tests/
 ```
 
-历史 Go2/mjlab 事件、Gate41 配置、runner、协议和报告保留在 [`../references/archived_force_estimator`](../references/archived_force_estimator)，用于溯源和核对，不是这个包的运行依赖。
+历史 Go2/mjlab 事件、Gate41 配置和 runner 保留在 [`training/legacy_mjlab`](training/legacy_mjlab)，用于溯源和核对，不是这个包的运行依赖。
 
 ## 安装和验证
 

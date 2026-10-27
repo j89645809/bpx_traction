@@ -23,3 +23,6 @@ deploy_pkg/
 
 # 本地工具配置
 .claude/
+
+.pytest_cache/
+.DS_Store
