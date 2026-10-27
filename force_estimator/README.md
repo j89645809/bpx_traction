@@ -77,3 +77,7 @@ PYTHONPATH=src pytest -q tests/test_contracts.py
 ## 当前最佳候选发布包
 
 当前本地验收中最好的冻结版本已放在 [`releases/acceptance_v2_selected/`](releases/acceptance_v2_selected/)。该目录包含第 6320 轮 checkpoint、TorchScript、ONNX、归一化统计量、完整验收结果和复现实验协议。它的整体合力大小 RMSE 为 1.090 N，方向 P95 为 7.426°，但仍未获得正式应用验收通过结论。
+
+## 训练源码
+
+训练、数据采集、导出和验收源码已恢复到 [`training/`](training/)，包括第 6320 轮最佳候选的收敛训练与 acceptance_v2 复验链路。该目录不包含服务器日志、数据集、机器人资产或缓存。
