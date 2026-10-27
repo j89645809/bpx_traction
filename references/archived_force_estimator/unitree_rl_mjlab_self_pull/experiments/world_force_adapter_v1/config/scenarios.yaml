@@ -1,0 +1,9 @@
+schema_version: gate41-scenarios-v1
+seeds: [41001, 41002, 41003]
+scenarios:
+  - {id: zero_stand, force_w_n: [0, 0, 0], yaw_deg: 0, duration_s: 8}
+  - {id: plus_x_heading, force_w_n: [20, 0, 0], yaw_deg: 0, duration_s: 8}
+  - {id: plus_x_yaw90, force_w_n: [20, 0, 0], yaw_deg: 90, duration_s: 8}
+  - {id: lateral_vertical, force_w_n: [0, 20, 15], yaw_deg: 0, duration_s: 8}
+  - {id: diagonal, force_w_n: [30, 25, 0], yaw_deg: 30, duration_s: 8}
+  - {id: release, force_w_n: [20, 0, 0], release_at_s: 4, yaw_deg: 0, duration_s: 8}

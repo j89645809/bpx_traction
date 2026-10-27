@@ -1,0 +1,23 @@
+schema_version: gate41-world-v1
+tether:
+  force_frame: world_fixed
+  world_frame: startup_heading_gravity_aligned
+  application_point_frame: body
+policy:
+  checkpoint: artifacts/gate41_model17488_frozen_20260718/model_17488.pt
+  force_input_frame: body
+  observation_dimension: 73
+  action_dimension: 12
+estimator:
+  force_output_frame: world
+  history_steps: 25
+  sample_period_s: 0.02
+  input_dimension: 64
+logging:
+  emit_both_frames: true
+  require_frame_id: true
+  forbidden_ambiguous_fields: [force, tether_force, external_force]
+safety:
+  min_confidence: 0.55
+  low_confidence_grace_s: 0.20
+  communication_timeout_s: 0.10
