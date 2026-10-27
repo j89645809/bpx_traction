@@ -20,7 +20,9 @@ def main():
     env_cfg = load_cfg_from_registry(args.task, "env_cfg_entry_point"); env_cfg.scene.num_envs = args.num_envs
     agent_cfg = load_cfg_from_registry(args.task, "rsl_rl_cfg_entry_point")
     env = gym.make(args.task, cfg=env_cfg); env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
-    runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device); runner.load(args.checkpoint); policy = runner.get_inference_policy(device=agent_cfg.device)
+    cfg_dict = agent_cfg.to_dict(); cfg_dict["actor"] = {k: v for k, v in cfg_dict.get("actor", {}).items() if k in {"class_name", "hidden_dims", "activation", "obs_normalization", "distribution_cfg", "encoder_hidden_dims", "encoder_activation", "latent_dim"}}
+    cfg_dict["critic"] = {k: v for k, v in cfg_dict.get("critic", {}).items() if k in {"class_name", "hidden_dims", "activation", "obs_normalization", "distribution_cfg", "encoder_hidden_dims", "encoder_activation", "latent_dim"}}
+    runner = OnPolicyRunner(env, cfg_dict, log_dir=None, device=agent_cfg.device); runner.load(args.checkpoint); policy = runner.get_inference_policy(device=agent_cfg.device)
     base = env.unwrapped; state = get_force_state(base); robot = base.scene["robot"]
     history = torch.zeros(args.num_envs, 25, 45, device=base.device); xs=[]; ys=[]; qs=[]
     obs = env.get_observations()
