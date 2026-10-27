@@ -5,12 +5,11 @@
 ## 项目关系
 
 ```text
-25 帧本体感知历史 [B, 25, 64]
+25 帧 BPX policy 历史 [B, 25, 45]
         │
         ▼
-MissingStateTCN
-        │ values [B, 15] + confidence [B, 4]
-        │ values[:, 12:15] = world-frame force (N)
+BpxForceTCN
+        │ force_world [B, 3] + confidence [B, 1]
         ▼
 world → body 坐标变换（由上层适配器完成）
         │
@@ -21,14 +20,14 @@ force_body / 45，clip 到 [-1, 1] + force confidence
 BPX ForceAware RMA：policy 49 维，history 1225 维
 ```
 
-另有一个保留原始训练结构的 `ForceEstimator`，输入 `[B, 25, input_dim]`、输出 `[B, 3]`，用于旧版 GuideDog/82 维估计器路线。它是精度基线，不能直接接 BPX；正式 BPX handoff 使用 64 维 `MissingStateTCN` 和 `BpxForceEstimator` 适配器。
+另有一个保留原始训练结构的 `ForceEstimator`，输入 `[B, 25, input_dim]`、输出 `[B, 3]`，用于旧版 GuideDog/82 维估计器路线。它是精度基线，不能直接接 BPX；正式 BPX handoff 使用 45 维 `BpxForceTCN` 和 `BpxForceEstimator` 适配器。
 
 ## 目录
 
 ```text
 force_estimator/
 ├── config/
-│   ├── normalization.npz       # v2 的 64 通道 mean/std
+│   ├── normalization.npz       # v2 的 45 通道 mean/std（BPX 训练后生成）
 │   └── world_force.yaml        # 坐标系、时序、输出和安全阈值
 ├── provenance/SOURCES.md       # 每个文件的远端来源
 ├── src/force_estimator/
@@ -63,22 +62,23 @@ PYTHONPATH=src pytest -q tests/test_contracts.py
 | 模块 | 输入 | 输出 |
 |---|---|---|
 | `ForceEstimator` | `[B, 25, input_dim]` | force `[B, 3]` |
-| `MissingStateTCN` | `[B, T, 64]` | values `[B, 15]`, confidence `[B, 4]` |
+| `BpxForceTCN` | `[B, 25, 45]` | world force `[B, 3]`, confidence `[B, 1]` |
+| `MissingStateTCN`（历史 Go2） | `[B, T, 64]` | values `[B, 15]`, confidence `[B, 4]` |
 | BPX handoff | body force in N `[B, 3]` | `clip(force / 45, -1, 1)` + confidence |
 
 `MissingStateTCN` 的 `values` 顺序是 velocity(3)、height(1)、contact(4)、load(4)、force(3)，最后三维是世界坐标系外力；置信度第 3 列（零基索引）对应 force confidence。因果 TCN 只使用当前及过去时间步。
 
 ## 重要边界
 
-- `normalization.npz` 只适用于 64 通道输入；代码会检查 mean/std 的形状和正值。
-- [`config/bpx_deploy.yaml`](config/bpx_deploy.yaml) 是直接接入 BPX 的部署契约；[`src/force_estimator/bpx_adapter.py`](src/force_estimator/bpx_adapter.py) 负责 64 维归一化、世界系到机身系旋转、45 N 归一化和无效输入降级。
+- `normalization.npz` 只适用于 45 通道输入；代码会检查 mean/std 的形状和正值。
+- [`config/bpx_deploy.yaml`](config/bpx_deploy.yaml) 是直接接入 BPX 的部署契约；[`src/force_estimator/bpx_adapter.py`](src/force_estimator/bpx_adapter.py) 负责 45 维归一化、世界系到机身系旋转、45 N 归一化和无效输入降级。
 - 世界坐标到机身坐标的变换必须由适配器完成，并在日志中明确记录 frame，不能把 `force` 作为含义不明的字段。
 - 45 N 是 BPX policy 的归一化尺度，80 N 是 world model 输出的仿真范围；两者不是同一个阈值。
 - 训练源码不包含额外的日志、数据集或机器人资产；发布目录只保留经过校验的模型文件。
 
 ## 当前最佳候选发布包
 
-当前本地验收中最好的 82 维冻结基线已放在 [`releases/acceptance_v2_selected/`](releases/acceptance_v2_selected)。其中 epoch6320 checkpoint 和 `acceptance_v2_selected.onnx` 保留 1.090 N 的历史基线，不能直接接 BPX；`missing_state_world_v2_estimator.onnx` 是 64 维、带 confidence 的 BPX 结构候选，必须按 BPX 数据重新验收，不能继承 1.090 N 结果。
+当前本地验收中最好的 82 维冻结基线已放在 [`releases/acceptance_v2_selected/`](releases/acceptance_v2_selected)。其中 epoch6320 checkpoint 和 `acceptance_v2_selected.onnx` 保留 1.090 N 的历史基线，不能直接接 BPX；`bpx_force.onnx` 将由 BPX 数据训练生成，输入为 45 维历史并同时输出 force/confidence；旧的 missing_state_world_v2_estimator.onnx 是 64 维历史候选，不能继承 1.090 N 结果。
 
 ## 训练源码
 

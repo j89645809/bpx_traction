@@ -37,8 +37,10 @@ DATASET/
 
 每个 NPZ 至少包含：
 
-- `sensor_history`: `[N, 25, 64]`
+- 旧版 Go2 数据：`sensor_history`: `[N, 25, 64]`
 - `privileged_targets`: `[N, 15]`
+
+BPX 数据格式：`sensor_history`: `[N,25,45]`，`force_world`: `[N,3]`；由 `collect_bpx_force_dataset.py` 生成。
 
 运行：
 
@@ -79,3 +81,14 @@ PYTHONPATH=. python scripts/evaluate_estimator.py \
 `legacy_mjlab/` 只保留采集和任务所需的 Python 源码，已去掉旧备份、缓存、权重、数据和资产。要在服务器复现，需要根据本机环境把 `training/source` 和 `training/legacy_mjlab` 加入 `PYTHONPATH`，并提供对应的仿真依赖与数据。
 
 结果和冻结模型见 [`../releases/acceptance_v2_selected/`](../releases/acceptance_v2_selected/)。
+
+
+## BPX 45-D 训练
+
+`source/collect_bpx_force_dataset.py` 在 ForceAware BPX 环境中采集 `[N,25,45]` policy 历史和 world-frame force 标签；`source/train_bpx_force_estimator.py` 训练并导出 `bpx_force.onnx`、`bpx_force.ts` 和归一化统计量。
+
+```bash
+conda activate bpx_rma
+python source/collect_bpx_force_dataset.py --checkpoint /path/to/force_aware_teacher.pt --output /path/to/bpx_dataset --headless --device cuda:0
+PYTHONPATH=../../src python source/train_bpx_force_estimator.py --dataset /path/to/bpx_dataset --output /path/to/bpx_force_release
+```

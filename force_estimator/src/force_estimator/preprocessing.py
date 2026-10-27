@@ -10,7 +10,7 @@ import numpy as np
 from .contracts import FORCE_DIM, POLICY_FORCE_SCALE_N, WORLD_INPUT_DIM
 
 
-def load_normalization(path: str | Path) -> tuple[np.ndarray, np.ndarray]:
+def load_normalization(path: str | Path, expected_dim: int = WORLD_INPUT_DIM) -> tuple[np.ndarray, np.ndarray]:
     """Load a ``mean``/``std`` pair and validate its feature dimension."""
     data = np.load(path)
     missing = {"mean", "std"} - set(data.files)
@@ -18,21 +18,21 @@ def load_normalization(path: str | Path) -> tuple[np.ndarray, np.ndarray]:
         raise ValueError(f"normalization file is missing keys: {sorted(missing)}")
     mean = np.asarray(data["mean"], dtype=np.float32)
     std = np.asarray(data["std"], dtype=np.float32)
-    if mean.shape != (WORLD_INPUT_DIM,) or std.shape != (WORLD_INPUT_DIM,):
+    if mean.shape != (expected_dim,) or std.shape != (expected_dim,):
         raise ValueError(
-            f"expected mean/std shape ({WORLD_INPUT_DIM},), got {mean.shape}/{std.shape}"
+            f"expected mean/std shape ({expected_dim},), got {mean.shape}/{std.shape}"
         )
     if not np.isfinite(mean).all() or not np.isfinite(std).all() or np.any(std <= 0):
         raise ValueError("normalization mean/std must be finite and std must be positive")
     return mean, std
 
 
-def normalize_history(history: Any, mean: Any, std: Any) -> Any:
+def normalize_history(history: Any, mean: Any, std: Any, expected_dim: int = WORLD_INPUT_DIM) -> Any:
     """Normalize ``[..., 64]`` history while preserving the array/tensor type."""
     shape = getattr(history, "shape", ())
-    if len(shape) < 2 or shape[-1] != WORLD_INPUT_DIM:
-        raise ValueError(f"history must have at least two dimensions and end in {WORLD_INPUT_DIM}")
-    if getattr(mean, "shape", ()) != (WORLD_INPUT_DIM,) or getattr(std, "shape", ()) != (WORLD_INPUT_DIM,):
+    if len(shape) < 2 or shape[-1] != expected_dim:
+        raise ValueError(f"history must have at least two dimensions and end in {expected_dim}")
+    if getattr(mean, "shape", ()) != (expected_dim,) or getattr(std, "shape", ()) != (expected_dim,):
         raise ValueError("mean and std must each have shape (64,)")
     return (history - mean) / std
 

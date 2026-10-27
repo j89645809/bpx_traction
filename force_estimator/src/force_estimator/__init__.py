@@ -1,9 +1,8 @@
 """Public force-estimation contracts and optional PyTorch models."""
 
-from .contracts import WorldForceContract
+from .contracts import BpxForceContract, WorldForceContract
 from .bpx_adapter import BpxForceEstimator
-
-__all__ = ["WorldForceContract", "BpxForceEstimator"]
+__all__ = ["WorldForceContract", "BpxForceContract", "BpxForceEstimator"]
 
 # Keep contract/preprocessing tooling usable on machines without PyTorch. The
 # model classes remain importable from ``force_estimator.model`` and
@@ -11,8 +10,9 @@ __all__ = ["WorldForceContract", "BpxForceEstimator"]
 try:  # pragma: no cover - depends on the host environment
     from .model import ForceEstimator
     from .world_model import MissingStateTCN
+    from .bpx_model import BpxForceTCN
 except ModuleNotFoundError as exc:
     if exc.name != "torch":
         raise
 else:
-    __all__ += ["ForceEstimator", "MissingStateTCN"]
+    __all__ += ["ForceEstimator", "MissingStateTCN", "BpxForceTCN"]

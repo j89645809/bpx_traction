@@ -1,4 +1,4 @@
-"""Direct BPX adapter for the 64-D world-force ONNX model."""
+"""Direct BPX adapter for the 45-D BPX force ONNX model."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from .contracts import FORCE_VALUE_SLICE, HISTORY_LENGTH, POLICY_FORCE_SCALE_N, WORLD_INPUT_DIM
+from .contracts import BPX_INPUT_DIM, FORCE_VALUE_SLICE, HISTORY_LENGTH, POLICY_FORCE_SCALE_N
 from .preprocessing import load_normalization
 
 
@@ -37,7 +37,7 @@ def world_to_body(force_world: np.ndarray, q_wb: np.ndarray) -> np.ndarray:
 class BpxForceEstimator:
     """Run the 64-D estimator and return BPX-ready force/confidence tensors.
 
-    The model must expose one input ``[B, 25, 64]`` and two outputs:
+    The model must expose one input ``[B, 25, 45]`` and two outputs:
     ``values [B, 15]`` and ``confidence [B, 4]``. The last three values are
     world-frame force in newtons and confidence column 3 is force confidence.
     """
@@ -50,7 +50,7 @@ class BpxForceEstimator:
                 raise RuntimeError("install onnxruntime to use BpxForceEstimator") from exc
             session = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
         self.session = session
-        self.mean, self.std = load_normalization(normalization_path)
+        self.mean, self.std = load_normalization(normalization_path, expected_dim=BPX_INPUT_DIM)
         inputs = session.get_inputs()
         outputs = session.get_outputs()
         if len(inputs) != 1 or len(outputs) < 2:
@@ -65,8 +65,8 @@ class BpxForceEstimator:
     ) -> tuple[np.ndarray, np.ndarray]:
         history = np.asarray(history, dtype=np.float32)
         q_wb = np.asarray(q_wb, dtype=np.float32)
-        if history.ndim != 3 or history.shape[1:] != (HISTORY_LENGTH, WORLD_INPUT_DIM):
-            raise ValueError(f"expected history [B, {HISTORY_LENGTH}, {WORLD_INPUT_DIM}]")
+        if history.ndim != 3 or history.shape[1:] != (HISTORY_LENGTH, BPX_INPUT_DIM):
+            raise ValueError(f"expected history [B, {HISTORY_LENGTH}, {BPX_INPUT_DIM}]")
         if q_wb.shape != (history.shape[0], 4):
             raise ValueError("q_wb must have shape [B, 4] in wxyz order")
         if valid_mask is None:
@@ -80,12 +80,15 @@ class BpxForceEstimator:
         values, confidence = self.session.run(None, {self.input_name: model_input.astype(np.float32)})
         values = np.asarray(values, dtype=np.float32)
         confidence = np.asarray(confidence, dtype=np.float32)
-        if values.shape != (history.shape[0], 15) or confidence.shape != (history.shape[0], 4):
+        if values.shape == (history.shape[0], 3) and confidence.shape == (history.shape[0], 1):
+            force_world, force_confidence = values, confidence
+        elif values.shape == (history.shape[0], 15) and confidence.shape == (history.shape[0], 4):
+            force_world, force_confidence = values[:, FORCE_VALUE_SLICE], confidence[:, 3:4]
+        else:
             raise ValueError(f"unexpected model outputs: values={values.shape}, confidence={confidence.shape}")
-        force_world = values[:, FORCE_VALUE_SLICE]
         force_body = world_to_body(force_world, q_wb)
         force_policy = np.clip(force_body / POLICY_FORCE_SCALE_N, -1.0, 1.0)
-        force_confidence = np.clip(confidence[:, 3:4], 0.0, 1.0)
+        force_confidence = np.clip(force_confidence, 0.0, 1.0)
         valid &= finite_input & np.isfinite(values).all(axis=1) & np.isfinite(confidence).all(axis=1)
         force_policy[~valid] = 0.0
         force_confidence[~valid] = 0.0
