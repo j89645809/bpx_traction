@@ -42,7 +42,10 @@ class BpxForceEstimator:
     world-frame force in newtons and confidence column 3 is force confidence.
     """
 
-    def __init__(self, model_path: str | Path, normalization_path: str | Path, session: Any = None):
+    def __init__(self, model_path: str | Path, normalization_path: str | Path, session: Any = None, model_frame: str = "world"):
+        if model_frame not in {"world", "body"}:
+            raise ValueError("model_frame must be 'world' or 'body'")
+        self.model_frame = model_frame
         if session is None:
             try:
                 import onnxruntime as ort
@@ -86,7 +89,7 @@ class BpxForceEstimator:
             force_world, force_confidence = values[:, FORCE_VALUE_SLICE], confidence[:, 3:4]
         else:
             raise ValueError(f"unexpected model outputs: values={values.shape}, confidence={confidence.shape}")
-        force_body = world_to_body(force_world, q_wb)
+        force_body = force_world if self.model_frame == "body" else world_to_body(force_world, q_wb)
         force_policy = np.clip(force_body / POLICY_FORCE_SCALE_N, -1.0, 1.0)
         force_confidence = np.clip(force_confidence, 0.0, 1.0)
         valid &= finite_input & np.isfinite(values).all(axis=1) & np.isfinite(confidence).all(axis=1)

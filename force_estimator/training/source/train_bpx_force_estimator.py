@@ -12,7 +12,8 @@ from force_estimator.bpx_model import BpxForceTCN
 
 def load_split(path: Path):
     z = np.load(path)
-    return torch.from_numpy(z["sensor_history"]).float(), torch.from_numpy(z["force_world"]).float()
+    target = z["force_body"] if "force_body" in z else z["force_world"]
+    return torch.from_numpy(z["sensor_history"]).float(), torch.from_numpy(target).float()
 
 
 def loss_fn(pred: torch.Tensor, target: torch.Tensor, confidence: torch.Tensor) -> torch.Tensor:
@@ -66,9 +67,9 @@ def main() -> None:
             super().__init__(); self.m = m; self.register_buffer("mean", mu); self.register_buffer("std", sigma)
         def forward(self, x): return self.m((x - self.mean) / self.std)
     wrapper = Normalized(model, ckpt["mean"], ckpt["std"]).eval(); example = torch.zeros(1, 25, 45)
-    torch.onnx.export(wrapper, example, out / "bpx_force.onnx", input_names=["policy_history"], output_names=["force_world", "force_confidence"], dynamic_axes={"policy_history": {0: "batch"}, "force_world": {0: "batch"}, "force_confidence": {0: "batch"}}, opset_version=17, dynamo=False)
+    torch.onnx.export(wrapper, example, out / "bpx_force.onnx", input_names=["policy_history"], output_names=["force_body", "force_confidence"], dynamic_axes={"policy_history": {0: "batch"}, "force_world": {0: "batch"}, "force_confidence": {0: "batch"}}, opset_version=17, dynamo=False)
     torch.jit.trace(wrapper, example).save(str(out / "bpx_force.ts"))
     np.savez(out / "normalization.npz", mean=ckpt["mean"].numpy(), std=ckpt["std"].numpy())
-    (out / "training_report.json").write_text(json.dumps({"best_validation_loss": best, "epochs": history, "input_shape": [25, 45], "outputs": {"force_world": [3], "force_confidence": [1]}}, indent=2) + "\n")
+    (out / "training_report.json").write_text(json.dumps({"best_validation_loss": best, "epochs": history, "input_shape": [25, 45], "target_frame": "body", "outputs": {"force_body": [3], "force_confidence": [1]}}, indent=2) + "\n")
 
 if __name__ == "__main__": main()

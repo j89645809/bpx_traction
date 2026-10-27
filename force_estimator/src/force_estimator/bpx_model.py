@@ -13,7 +13,7 @@ class BpxForceTCN(nn.Module):
     """Causal TCN with force and confidence heads for BPX.
 
     Input is the upstream policy frame (45 values) over 25 samples. The force
-    head returns world-frame newtons; confidence is a scalar in [0, 1].
+    head returns body-frame newtons; confidence is a scalar in [0, 1].
     """
 
     def __init__(self, input_dim: int = BPX_INPUT_DIM, channels: int = 64):
