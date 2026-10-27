@@ -32,7 +32,10 @@
 - `config/missing_state_world_v2_normalization.npz`：64 通道 mean/std。
 - `reports/`：验收汇总、完整报告、统计 JSON 和 Fz 诊断。
 - `experiments/`：验收协议和远程复现实验协议。
-- `SHA256SUMS.txt`：原始交付包的文件校验值。
+- `SHA256SUMS.txt`：当前 GitHub 目录内文件的校验值。
+- `ORIGINAL_SHA256SUMS.txt`：原始 2026-10-21 压缩包的校验值，用于溯源。
+
+训练、数据采集、导出和验收源码不在这个发布目录内，位于同一分支的 [`../../training/`](../../training/)。因此本目录是“冻结模型与结果发布包”，要重跑训练应从 `training/` 进入；要做部署推理则使用 `models/` 中的 TorchScript 或 ONNX 文件。
 
 ## 结论和限制
 
