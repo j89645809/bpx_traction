@@ -53,6 +53,8 @@ parser.add_argument(
 parser.add_argument("--resume", action="store_true", help="接着上一次同类型的 run 继续练")
 parser.add_argument("--load-run", dest="load_run", type=str, default=None, help="指定 run 目录的正则")
 parser.add_argument("--logger", type=str, default=None, choices=["tensorboard", "wandb", "neptune"])
+parser.add_argument("--force-estimator", type=str, default=None, help="TorchScript estimator for closed-loop ForceAware training")
+parser.add_argument("--force-normalization", type=str, default=None, help="Estimator normalization.npz")
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
@@ -122,6 +124,11 @@ def main() -> None:
 
     env_cfg.log_dir = log_dir
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode=None)
+    if args_cli.force_estimator:
+        from bpx_rma.force_estimator_wrapper import ForceEstimatorObservationWrapper
+        if not args_cli.force_normalization:
+            raise ValueError("--force-normalization is required with --force-estimator")
+        env = ForceEstimatorObservationWrapper(env, args_cli.force_estimator, args_cli.force_normalization)
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
 
     runner_cls = DistillationRunner if agent_cfg.class_name == "DistillationRunner" else OnPolicyRunner
