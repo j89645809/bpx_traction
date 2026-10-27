@@ -92,3 +92,7 @@ conda activate bpx_rma
 python source/collect_bpx_force_dataset.py --checkpoint /path/to/force_aware_teacher.pt --output /path/to/bpx_dataset --headless --device cuda:0
 PYTHONPATH=../../src python source/train_bpx_force_estimator.py --dataset /path/to/bpx_dataset --output /path/to/bpx_force_release
 ```
+
+## 服务器 GPU 调度约定
+
+后续训练、数据采集和验收默认优先使用 GPU 1、2、3；启动前检查占用情况，按 `CUDA_VISIBLE_DEVICES=1`（或 2、3）绑定空闲卡。GPU 5、7 仅作为当前这次已启动任务的临时卡位，不作为后续默认选择。
