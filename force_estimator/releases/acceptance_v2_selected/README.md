@@ -26,7 +26,7 @@
 ## 文件说明
 
 - `models/convergence_v1_best_epoch6320.pt`：最佳冻结 PyTorch checkpoint。
-- `models/acceptance_v2_selected.onnx`：验收候选 ONNX。
+- `models/acceptance_v2_selected.onnx`：82 维历史精度候选，不能直接接入 BPX。
 - `models/missing_state_world_v2_estimator.ts`：TorchScript 模型。
 - `models/missing_state_world_v2_estimator.onnx` + `.onnx.data`：外部数据格式 ONNX 模型。
 - `config/missing_state_world_v2_normalization.npz`：64 通道 mean/std。
@@ -36,6 +36,10 @@
 - `ORIGINAL_SHA256SUMS.txt`：原始 2026-10-21 压缩包的校验值，用于溯源。
 
 训练、数据采集、导出和验收源码不在这个发布目录内，位于同一分支的 [`../../training/`](../../training/)。因此本目录是“冻结模型与结果发布包”，要重跑训练应从 `training/` 进入；要做部署推理则使用 `models/` 中的 TorchScript 或 ONNX 文件。
+
+## BPX 直接接入
+
+BPX 使用 64 维、25 帧的 `missing_state_world_v2_estimator.onnx`，由上层适配器完成世界系到机身系旋转、`/45 N` 归一化、`[-1, 1]` 裁剪和 `confidence[:, 3]` 提取。仓库中的 `force_estimator/src/force_estimator/bpx_adapter.py` 和 `force_estimator/config/bpx_deploy.yaml` 是正式入口。该 64 维结构候选尚未获得与 82 维历史基线相同的精度验收；上方的 1.090 N 只属于 82 维 Go2/mjlab 基线。
 
 ## 结论和限制
 

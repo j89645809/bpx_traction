@@ -1,0 +1,18 @@
+# Direct BPX inference contract for the 64-D world-force model.
+model: releases/acceptance_v2_selected/models/missing_state_world_v2_estimator.onnx
+normalization: releases/acceptance_v2_selected/config/missing_state_world_v2_normalization.npz
+input:
+  shape: [batch, 25, 64]
+  sample_period_s: 0.02
+  quaternion_order: wxyz
+output:
+  values_shape: [batch, 15]
+  confidence_shape: [batch, 4]
+  force_values_slice: [12, 15]
+  force_frame: world
+  force_confidence_column: 3
+policy_handoff:
+  body_force_scale_n: 45.0
+  body_force_clip: [-1.0, 1.0]
+  output_shape: [batch, 3]
+  confidence_shape: [batch, 1]

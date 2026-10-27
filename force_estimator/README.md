@@ -21,7 +21,7 @@ force_body / 45，clip 到 [-1, 1] + force confidence
 BPX ForceAware RMA：policy 49 维，history 1225 维
 ```
 
-另有一个保留原始训练结构的 `ForceEstimator`，输入 `[B, 25, input_dim]`、输出 `[B, 3]`，用于旧版 GuideDog/82 维估计器路线。正式 BPX handoff 使用 `MissingStateTCN` 的 world-force 输出和 `config/world_force.yaml` 中的契约。
+另有一个保留原始训练结构的 `ForceEstimator`，输入 `[B, 25, input_dim]`、输出 `[B, 3]`，用于旧版 GuideDog/82 维估计器路线。它是精度基线，不能直接接 BPX；正式 BPX handoff 使用 64 维 `MissingStateTCN` 和 `BpxForceEstimator` 适配器。
 
 ## 目录
 
@@ -34,6 +34,7 @@ force_estimator/
 ├── src/force_estimator/
 │   ├── contracts.py            # 维度和输出切片
 │   ├── preprocessing.py        # shape 检查、归一化、策略力输入
+│   ├── bpx_adapter.py          # ONNX → BPX body-frame force/confidence
 │   ├── model.py                # 旧版 temporal ForceEstimator
 │   └── world_model.py          # causal MissingStateTCN
 └── tests/
@@ -70,13 +71,14 @@ PYTHONPATH=src pytest -q tests/test_contracts.py
 ## 重要边界
 
 - `normalization.npz` 只适用于 64 通道输入；代码会检查 mean/std 的形状和正值。
+- [`config/bpx_deploy.yaml`](config/bpx_deploy.yaml) 是直接接入 BPX 的部署契约；[`src/force_estimator/bpx_adapter.py`](src/force_estimator/bpx_adapter.py) 负责 64 维归一化、世界系到机身系旋转、45 N 归一化和无效输入降级。
 - 世界坐标到机身坐标的变换必须由适配器完成，并在日志中明确记录 frame，不能把 `force` 作为含义不明的字段。
 - 45 N 是 BPX policy 的归一化尺度，80 N 是 world model 输出的仿真范围；两者不是同一个阈值。
-- 仓库不包含 `.pt`、`.onnx`、数据集、机器人资产或服务器凭据。
+- 训练源码不包含额外的日志、数据集或机器人资产；发布目录只保留经过校验的模型文件。
 
 ## 当前最佳候选发布包
 
-当前本地验收中最好的冻结版本已放在 [`releases/acceptance_v2_selected/`](releases/acceptance_v2_selected/)。该目录包含第 6320 轮 checkpoint、TorchScript、ONNX、归一化统计量、完整验收结果和复现实验协议。它的整体合力大小 RMSE 为 1.090 N，方向 P95 为 7.426°，但仍未获得正式应用验收通过结论。
+当前本地验收中最好的 82 维冻结基线已放在 [`releases/acceptance_v2_selected/`](releases/acceptance_v2_selected)。其中 epoch6320 checkpoint 和 `acceptance_v2_selected.onnx` 保留 1.090 N 的历史基线，不能直接接 BPX；`missing_state_world_v2_estimator.onnx` 是 64 维、带 confidence 的 BPX 结构候选，必须按 BPX 数据重新验收，不能继承 1.090 N 结果。
 
 ## 训练源码
 

@@ -1,8 +1,9 @@
 """Public force-estimation contracts and optional PyTorch models."""
 
 from .contracts import WorldForceContract
+from .bpx_adapter import BpxForceEstimator
 
-__all__ = ["WorldForceContract"]
+__all__ = ["WorldForceContract", "BpxForceEstimator"]
 
 # Keep contract/preprocessing tooling usable on machines without PyTorch. The
 # model classes remain importable from ``force_estimator.model`` and
