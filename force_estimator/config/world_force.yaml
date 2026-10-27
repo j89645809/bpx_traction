@@ -1,0 +1,22 @@
+schema_version: force-estimator-v1
+history:
+  steps: 25
+  sample_period_s: 0.02
+  input_dimension: 64
+world_model:
+  values_dimension: 15
+  confidence_dimension: 4
+  force_value_slice: [12, 15]
+  force_limit_n: 80.0
+  output_frame: world
+policy_handoff:
+  input_frame: body
+  force_dimension: 3
+  force_scale_n: 45.0
+  force_clip: [-1.0, 1.0]
+  confidence_index: 3
+  confidence_range: [0.0, 1.0]
+safety:
+  min_confidence: 0.55
+  low_confidence_grace_s: 0.20
+  communication_timeout_s: 0.10
