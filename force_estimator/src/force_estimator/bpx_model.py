@@ -16,7 +16,7 @@ class BpxForceTCN(nn.Module):
     head returns body-frame newtons; confidence is a scalar in [0, 1].
     """
 
-    def __init__(self, input_dim: int = BPX_INPUT_DIM, channels: int = 64):
+    def __init__(self, input_dim: int = BPX_INPUT_DIM, channels: int = 128):
         super().__init__()
         if input_dim != BPX_INPUT_DIM:
             raise ValueError(f"BPX input dimension is fixed at {BPX_INPUT_DIM}")

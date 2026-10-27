@@ -36,13 +36,14 @@ def main() -> None:
     ap.add_argument("--epochs", type=int, default=60)
     ap.add_argument("--batch-size", type=int, default=1024)
     ap.add_argument("--seed", type=int, default=20261027)
+    ap.add_argument("--channels", type=int, default=128)
     args = ap.parse_args()
     torch.manual_seed(args.seed); np.random.seed(args.seed)
     data = Path(args.dataset); out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
     train_x, train_y = load_split(data / "train.npz")
     val_x, val_y = load_split(data / "validation.npz")
     mean = train_x.mean((0, 1)); std = train_x.std((0, 1)).clamp_min(1e-4)
-    model = BpxForceTCN().cuda(); opt = torch.optim.AdamW(model.parameters(), lr=8e-4, weight_decay=1e-4)
+    model = BpxForceTCN(channels=args.channels).cuda(); opt = torch.optim.AdamW(model.parameters(), lr=8e-4, weight_decay=1e-4)
     loader = DataLoader(TensorDataset(train_x, train_y), batch_size=args.batch_size, shuffle=True, drop_last=False)
     best = float("inf"); history = []
     for epoch in range(args.epochs):
@@ -61,7 +62,7 @@ def main() -> None:
             best = val_loss
             torch.save({"model": model.state_dict(), "mean": mean, "std": std, "input_dim": 45, "history_length": 25, "seed": args.seed}, out / "bpx_force_best.pt")
     ckpt = torch.load(out / "bpx_force_best.pt", map_location="cpu", weights_only=False)
-    model = BpxForceTCN().cpu().eval(); model.load_state_dict(ckpt["model"])
+    model = BpxForceTCN(channels=args.channels).cpu().eval(); model.load_state_dict(ckpt["model"])
     class Normalized(nn.Module):
         def __init__(self, m, mu, sigma):
             super().__init__(); self.m = m; self.register_buffer("mean", mu); self.register_buffer("std", sigma)
