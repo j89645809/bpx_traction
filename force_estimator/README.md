@@ -73,3 +73,7 @@ PYTHONPATH=src pytest -q tests/test_contracts.py
 - 世界坐标到机身坐标的变换必须由适配器完成，并在日志中明确记录 frame，不能把 `force` 作为含义不明的字段。
 - 45 N 是 BPX policy 的归一化尺度，80 N 是 world model 输出的仿真范围；两者不是同一个阈值。
 - 仓库不包含 `.pt`、`.onnx`、数据集、机器人资产或服务器凭据。
+
+## 当前最佳候选发布包
+
+当前本地验收中最好的冻结版本已放在 [`releases/acceptance_v2_selected/`](releases/acceptance_v2_selected/)。该目录包含第 6320 轮 checkpoint、TorchScript、ONNX、归一化统计量、完整验收结果和复现实验协议。它的整体合力大小 RMSE 为 1.090 N，方向 P95 为 7.426°，但仍未获得正式应用验收通过结论。
