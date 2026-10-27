@@ -26,7 +26,7 @@ def main():
     with torch.inference_mode():
       for step in range(args.steps):
         frame=obs['policy'][:,:45]; hist[:,:-1]=hist[:,1:]; hist[:,-1]=frame
-        f,c=model((hist-mean)/std); st.est_force_b[:]=f; st.confidence[:]=c.clamp(0,1)
+        f,c=model((hist-mean)/std); f=f.clamp(-45.0,45.0); st.est_force_b[:]=f; st.confidence[:]=c.clamp(0,1)
         obs=env.get_observations(); action=policy(obs); obs,reward,done,_=env.step(action)
         t=st.true_force_b.detach().cpu().numpy(); q=f.detach().cpu().numpy(); err.append(np.abs(q-t)); true.append(t); pred.append(q); rewards.append(reward.detach().cpu().numpy()); falls += int(done.sum().item()) if torch.is_tensor(done) else 0
         if torch.is_tensor(done) and done.any(): hist[done]=0
